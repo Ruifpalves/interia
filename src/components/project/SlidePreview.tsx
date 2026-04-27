@@ -53,12 +53,19 @@ export function SlidePreview({
           ))}
         </div>
       );
-    case "plan":
+    case "plan": {
+      const svg = (content.svg as string | undefined) ?? "";
+      if (svg) {
+        return (
+          <div className={cls + " p-3 flex items-center justify-center bg-white"} dangerouslySetInnerHTML={{ __html: svg }} />
+        );
+      }
       return (
         <div className={cls + " flex items-center justify-center text-muted"} style={{ fontSize: small ? 7 : 11 }}>
-          {String(content.variant ?? "plan")} · planta da projeto
+          {String(content.variant ?? "plan")} · planta a gerar no PDF
         </div>
       );
+    }
     case "render":
       return (
         <div className={cls + " p-2 grid grid-cols-2 gap-1"}>

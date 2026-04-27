@@ -5,6 +5,7 @@ import { getServerSupabase } from "@/lib/supabase/server";
 import { requireSession } from "@/server/queries/workspace";
 import { genText, generateImage } from "@/lib/ai/clients";
 import { briefingSystemPrompt, buildImagePrompts, editPromptSystemPrompt } from "@/lib/ai/prompts";
+import { interpretFloorplan } from "@/lib/ai/vision";
 import type { BriefingState, PlanState, StyleState } from "@/types/project";
 
 const briefingResultSchema = z.object({
@@ -158,6 +159,28 @@ async function generateOneRender(
       .update({ status: "failed", error_message: (e as Error).message, generation_time_ms: Date.now() - started })
       .eq("id", renderId);
     return null;
+  }
+}
+
+// PIPELINE 2 — Floorplan photo → initial PlanState
+export async function runFloorplanVision(projectId: string, assetId: string) {
+  await requireSession();
+  const supabase = await getServerSupabase();
+  const [{ data: asset }, { data: project }] = await Promise.all([
+    supabase.from("assets").select("url, storage_path").eq("id", assetId).single(),
+    supabase.from("projects").select("measurements_json").eq("id", projectId).single(),
+  ]);
+  if (!asset?.url) return { error: "Imagem da planta não encontrada." };
+
+  try {
+    const plan = await interpretFloorplan({
+      imageUrl: asset.url,
+      measurements: project?.measurements_json as Record<string, unknown> | null,
+    });
+    await supabase.from("projects").update({ plan_json: plan }).eq("id", projectId);
+    return { ok: true as const };
+  } catch (e) {
+    return { error: (e as Error).message };
   }
 }
 

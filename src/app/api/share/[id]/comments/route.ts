@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getAdminSupabase } from "@/lib/supabase/admin";
+import { sendEmail, templates } from "@/lib/email/send";
+import { sendWhatsapp, whatsappTemplates } from "@/lib/whatsapp/send";
+import { env } from "@/lib/env";
 
 export const runtime = "nodejs";
 
@@ -33,8 +36,9 @@ export async function POST(req: Request, ctx: RouteContext<"/api/share/[id]/comm
   // Notify the project owner
   const { data: project } = await admin
     .from("projects")
-    .select("designer_id, workspace_id")
+    .select("designer_id, workspace_id, name, profiles:designer_id(email, full_name), workspaces(name, phone)")
     .eq("id", id)
+    .returns<Array<{ designer_id: string | null; workspace_id: string; name: string; profiles: { email: string; full_name: string | null } | null; workspaces: { name: string; phone: string | null } | null }>>()
     .single();
   if (project?.designer_id) {
     await admin.from("notifications").insert({
@@ -43,6 +47,24 @@ export async function POST(req: Request, ctx: RouteContext<"/api/share/[id]/comm
       type: "comment",
       payload_json: { project_id: id, comment_id: data.id, author: body.data.authorName },
     });
+
+    const designerEmail = project.profiles?.email;
+    if (designerEmail) {
+      await sendEmail({
+        to: designerEmail,
+        ...templates.comment({
+          studio: project.workspaces?.name ?? "",
+          project: project.name,
+          author: body.data.authorName,
+          text: body.data.text,
+          link: `${env.appUrl}/projects/${id}/delivery`,
+        }),
+      });
+    }
+    const ownerPhone = project.workspaces?.phone;
+    if (ownerPhone) {
+      await sendWhatsapp({ to: ownerPhone, message: whatsappTemplates.comment({ project: project.name, author: body.data.authorName }) });
+    }
   }
 
   return NextResponse.json(data);

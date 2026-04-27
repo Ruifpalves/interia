@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getServerSupabase } from "@/lib/supabase/server";
 import { requireSession } from "@/server/queries/workspace";
+import { sendEmail, templates } from "@/lib/email/send";
+import { env } from "@/lib/env";
 
 const workspaceSchema = z.object({
   address: z.string().optional(),
@@ -64,6 +66,18 @@ export async function inviteTeamAction(formData: FormData) {
   const { error } = await supabase.from("invites").insert(rows);
   if (error) return { error: error.message };
 
-  // Email sending is wired via Resend in production; left as no-op here.
+  await Promise.all(
+    rows.map((r) =>
+      sendEmail({
+        to: r.email,
+        ...templates.invite({
+          studio: session.workspaceName,
+          inviter: session.fullName ?? session.email,
+          link: `${env.appUrl}/signup?invite=${r.token}`,
+        }),
+      }),
+    ),
+  );
+
   return { ok: true, count: emails.length };
 }

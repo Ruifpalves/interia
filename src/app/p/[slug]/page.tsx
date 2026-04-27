@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 import { cookies } from "next/headers";
 import { getAdminSupabase } from "@/lib/supabase/admin";
+import { sendEmail, templates as emailTemplates } from "@/lib/email/send";
+import { env } from "@/lib/env";
 import { PublicViewer } from "./viewer";
 import { PasswordGate } from "./password-gate";
 
@@ -37,12 +39,31 @@ export default async function PublicSharePage(props: PageProps<"/p/[slug]">) {
     admin.from("comments").select("id, slide_id, author_name, text, created_at").eq("project_id", project.id).order("created_at", { ascending: true }),
   ]);
 
-  // Mark first open
-  await admin
+  // Mark first open and notify
+  const { data: firstOpen } = await admin
     .from("projects")
     .update({ share_opened_at: new Date().toISOString() })
     .eq("id", project.id)
-    .is("share_opened_at", null);
+    .is("share_opened_at", null)
+    .select("id, designer_id")
+    .returns<Array<{ id: string; designer_id: string | null }>>();
+  if (firstOpen && firstOpen.length > 0 && firstOpen[0].designer_id) {
+    const { data: designer } = await admin
+      .from("profiles")
+      .select("email")
+      .eq("id", firstOpen[0].designer_id)
+      .single();
+    if (designer?.email) {
+      await sendEmail({
+        to: designer.email,
+        ...emailTemplates.shareOpened({
+          studio: (Array.isArray(project.workspaces) ? project.workspaces[0]?.name : project.workspaces?.name) ?? "",
+          project: project.name,
+          link: `${env.appUrl}/projects/${project.id}/delivery`,
+        }),
+      });
+    }
+  }
 
   const ws = Array.isArray(project.workspaces) ? project.workspaces[0] : (project.workspaces as { name?: string; accent_color?: string; logo_url?: string } | null);
 

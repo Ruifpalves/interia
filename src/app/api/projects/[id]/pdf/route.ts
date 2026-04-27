@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { getServerSupabase } from "@/lib/supabase/server";
 import { renderDossierPdf } from "@/lib/pdf/render";
+import { renderPlanSvg } from "@/lib/pdf/plan-svg";
 import type { PdfPayload } from "@/lib/pdf/template";
+import type { PlanState } from "@/types/project";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -14,7 +16,7 @@ export async function GET(_req: Request, ctx: RouteContext<"/api/projects/[id]/p
 
   const { data: project } = await supabase
     .from("projects")
-    .select("id, name, type, subtype, location, clients(name), workspaces(name, address, phone, accent_color, logo_url)")
+    .select("id, name, type, subtype, location, plan_json, clients(name), workspaces(name, address, phone, accent_color, logo_url)")
     .eq("id", id)
     .returns<Array<{
       id: string;
@@ -22,6 +24,7 @@ export async function GET(_req: Request, ctx: RouteContext<"/api/projects/[id]/p
       type: string;
       subtype: string | null;
       location: string | null;
+      plan_json: PlanState | null;
       clients: { name: string } | { name: string }[] | null;
       workspaces: { id?: string; name: string; address: string | null; phone: string | null; accent_color: string; logo_url: string | null } | null;
     }>>()
@@ -53,11 +56,24 @@ export async function GET(_req: Request, ctx: RouteContext<"/api/projects/[id]/p
       subtype: (project.subtype as string | null) ?? null,
       location: (project.location as string | null) ?? null,
     },
-    slides: (slides ?? []).map((s) => ({
-      id: s.id as string,
-      type: s.type as string,
-      content: (s.content_json as Record<string, unknown>) ?? {},
-    })),
+    slides: (slides ?? []).map((s) => {
+      const content = (s.content_json as Record<string, unknown>) ?? {};
+      // Inject server-rendered plan SVGs for the "plan" slides so the PDF shows the real planta.
+      if (s.type === "plan" && project.plan_json) {
+        const variant = (content.variant as string) ?? "current_no_dims";
+        const withDims = variant !== "current_no_dims";
+        content.svg = renderPlanSvg(project.plan_json, {
+          theme: "light",
+          withDimensions: withDims,
+          title: variant === "proposal" ? "PLANTA PROPOSTA" : variant === "current_with_dims" ? "PLANTA ATUAL — MEDIDAS" : "PLANTA ATUAL",
+        });
+      }
+      return {
+        id: s.id as string,
+        type: s.type as string,
+        content,
+      };
+    }),
   };
 
   try {

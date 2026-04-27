@@ -97,9 +97,12 @@ function slideHtml(slide: PdfPayload["slides"][number], p: PdfPayload, accent: s
         </div>
       </section>`;
 
-    case "plan":
+    case "plan": {
+      const svg = (slide.content.svg as string | undefined) ?? "";
+      return `<section class="slide technical" style="background:white">${projectHeader}<div class="svgwrap">${svg}</div>${studioFooter}</section>`;
+    }
     default:
-      return `<section class="slide" style="display:flex;align-items:center;justify-content:center;color:#999;font-size:11pt">${projectHeader}— Planta —${studioFooter}</section>`;
+      return `<section class="slide" style="display:flex;align-items:center;justify-content:center;color:#999;font-size:11pt">${projectHeader}— Slide —${studioFooter}</section>`;
   }
 }
 

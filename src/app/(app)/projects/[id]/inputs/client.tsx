@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/input";
 import { createUploadUrl, registerAsset, deleteAsset, setCoverPhoto } from "@/server/actions/uploads";
 import { saveProjectField } from "@/server/actions/projects";
-import { runBriefingPipeline } from "@/server/actions/ai";
+import { runBriefingPipeline, runFloorplanVision } from "@/server/actions/ai";
 import { getBrowserSupabase } from "@/lib/supabase/client";
 
 type Photo = { id: string; url: string; thumbnail_url: string; is_cover: boolean };
@@ -101,6 +101,7 @@ export function InputsClient({
       {/* Measurements */}
       <Card icon={<Ruler size={16} />} title="Medidas" hint={projectType === "furniture" ? "Largura, altura, profundidade, obstáculos" : "Compartimento e aberturas"}>
         <MeasurementsForm
+          projectId={projectId}
           projectType={projectType}
           floorplans={floorplans}
           uploadFloorplan={async (f) => {
@@ -263,6 +264,7 @@ function UploadGrid({
 }
 
 function MeasurementsForm({
+  projectId,
   projectType,
   measurements,
   setMeasurements,
@@ -270,6 +272,7 @@ function MeasurementsForm({
   uploadFloorplan,
   deleteFloorplan,
 }: {
+  projectId: string;
   projectType: "furniture" | "space";
   measurements: Measurements;
   setMeasurements: (m: Measurements) => void;
@@ -278,9 +281,18 @@ function MeasurementsForm({
   deleteFloorplan: (id: string) => Promise<void>;
 }) {
   const [mode, setMode] = useState<"auto" | "manual">("manual");
+  const [interpreting, setInterpreting] = useState(false);
   const m = measurements ?? {};
 
   const update = (patch: Record<string, unknown>) => setMeasurements({ ...m, ...patch });
+
+  const interpret = async (assetId: string) => {
+    setInterpreting(true);
+    const r = await runFloorplanVision(projectId, assetId);
+    setInterpreting(false);
+    if ("error" in r && r.error) toast.error(r.error);
+    else toast.success("Planta interpretada. Vê e ajusta no editor 2D.");
+  };
 
   return (
     <>
@@ -302,13 +314,25 @@ function MeasurementsForm({
       </div>
 
       {mode === "auto" ? (
-        <UploadGrid
-          items={floorplans.map((f) => ({ id: f.id, url: f.thumbnail_url }))}
-          onPick={async (files) => {
-            for (const f of files) await uploadFloorplan(f);
-          }}
-          onDelete={deleteFloorplan}
-        />
+        <>
+          <UploadGrid
+            items={floorplans.map((f) => ({ id: f.id, url: f.thumbnail_url }))}
+            onPick={async (files) => {
+              for (const f of files) await uploadFloorplan(f);
+            }}
+            onDelete={deleteFloorplan}
+          />
+          {floorplans.length > 0 && (
+            <Button
+              variant="secondary"
+              disabled={interpreting}
+              onClick={() => interpret(floorplans[floorplans.length - 1].id)}
+              className="mt-3 w-full"
+            >
+              <Sparkles size={14} /> {interpreting ? "A interpretar..." : "Interpretar última imagem com IA"}
+            </Button>
+          )}
+        </>
       ) : projectType === "furniture" ? (
         <div className="grid grid-cols-2 gap-2">
           <NumField label="Largura total (m)" value={m.largura_total_m as number | undefined} onChange={(v) => update({ largura_total_m: v })} />
