@@ -1,65 +1,63 @@
-import Image from "next/image";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
-export default function Home() {
+export default function HomePage() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="min-h-screen flex flex-col">
+      <header className="flex items-center justify-between p-6 max-w-6xl mx-auto w-full">
+        <Link href="/" className="text-lg font-semibold tracking-tight">
+          Interia<span className="text-[var(--color-accent)]">.</span>
+        </Link>
+        <nav className="flex items-center gap-3">
+          <Link href="/login" className="btn btn-ghost text-sm">
+            Entrar
+          </Link>
+          <Link href="/signup">
+            <Button>Criar estúdio</Button>
+          </Link>
+        </nav>
+      </header>
+
+      <main className="flex-1 flex flex-col items-center text-center px-6 pt-16 pb-24 max-w-3xl mx-auto w-full">
+        <span className="text-[11px] uppercase tracking-[0.18em] text-[var(--color-accent)] mb-4">
+          Beta privado · Abril 2026
+        </span>
+        <h1 className="text-5xl md:text-6xl font-[family-name:var(--font-playfair)] leading-[1.05] tracking-tight">
+          Projetos completos de design de interiores em <em className="text-[var(--color-accent)]">30 minutos</em>.
+        </h1>
+        <p className="mt-6 text-lg text-muted max-w-xl">
+          Plantas, vistas técnicas cotadas, renders fotorrealistas e dossiê PDF profissional —
+          gerados por IA, com a marca do teu estúdio.
+        </p>
+        <div className="mt-10 flex flex-col sm:flex-row gap-3">
+          <Link href="/signup">
+            <Button size="lg">Começar grátis 14 dias</Button>
+          </Link>
+          <Link href="/studio">
+            <Button size="lg" variant="secondary">
+              Ver demonstração
+            </Button>
+          </Link>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
+        <p className="mt-3 text-xs text-muted">Sem cartão à entrada.</p>
+
+        <section className="mt-24 grid grid-cols-1 md:grid-cols-3 gap-6 w-full text-left">
+          {[
+            ["Editor 2D", "Plantas com cotagem automática, snap a grelha, camadas. Importa fundo de planta a mão."],
+            ["Renders IA", "Imagens fotorrealistas geradas em segundos a partir da planta + estilo escolhido."],
+            ["Dossiê pronto", "PDF profissional no template do teu estúdio. Link partilhável para o cliente."],
+          ].map(([t, d]) => (
+            <div key={t} className="panel p-5">
+              <h3 className="text-sm font-medium mb-1">{t}</h3>
+              <p className="text-xs text-muted leading-relaxed">{d}</p>
+            </div>
+          ))}
+        </section>
       </main>
+
+      <footer className="border-t border-[var(--color-border)] py-6 text-xs text-muted text-center">
+        © 2026 Interia · Data Script Swiss GmbH
+      </footer>
     </div>
   );
 }
